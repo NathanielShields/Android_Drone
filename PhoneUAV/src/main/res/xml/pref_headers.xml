@@ -1,0 +1,18 @@
+<preference-headers xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- These settings headers are only used on tablets. -->
+    <header
+        android:fragment="pl.bezzalogowe.PhoneUAV.SettingsActivity$GeneralPreferenceFragment"
+        android:icon="@drawable/ic_info"
+        android:title="@string/pref_header_general" />
+
+    <header
+        android:fragment="pl.bezzalogowe.PhoneUAV.SettingsActivity$EnvironmentPreferenceFragment"
+        android:icon="@drawable/ic_compass"
+        android:title="@string/pref_header_environment" />
+    <!-- https://materialdesignicons.com/icon/apple-safari -->
+
+    <header
+        android:fragment="pl.bezzalogowe.PhoneUAV.SettingsActivity$DataSyncPreferenceFragment"
+        android:icon="@drawable/ic_sync"
+        android:title="@string/pref_header_data_sync" />
+</preference-headers>

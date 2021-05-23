@@ -1,0 +1,516 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main_vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="#101010"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_margin="3dip"
+        android:layout_weight="1"
+        android:background="#505050"
+        android:descendantFocusability="beforeDescendants"
+        android:focusableInTouchMode="true">
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_margin="1dip"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <CheckBox
+                    android:id="@+id/checkboxAutopilot1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/symbol_stabilisation_pitch"
+                    android:textSize="12sp" />
+
+                <CheckBox
+                    android:id="@+id/checkboxAutopilot2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/symbol_stabilisation_roll"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/resetButton"
+                android:layout_width="51dp"
+                android:layout_height="fill_parent"
+                android:layout_margin="0dp"
+                android:gravity="center"
+                android:text="~" />
+
+            <Button
+                android:id="@+id/usbButton"
+                android:layout_width="51dp"
+                android:layout_height="fill_parent"
+                android:layout_margin="0dp"
+                android:text="USB"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/torchButton"
+                android:layout_width="51dp"
+                android:layout_height="fill_parent"
+                android:layout_margin="0dp"
+                android:gravity="center"
+                android:text="\u25cf"
+                android:textColor="#ffffffff" />
+
+            <Button
+                android:id="@+id/photoButton"
+                android:layout_width="51dp"
+                android:layout_height="fill_parent"
+                android:layout_margin="0dp"
+                android:gravity="center"
+                android:text="P" />
+
+            <Button
+                android:id="@+id/videoStartButton"
+                android:layout_width="51dp"
+                android:layout_height="fill_parent"
+                android:layout_margin="0dp"
+                android:gravity="center"
+                android:text="\u25cf"
+                android:textColor="#ffcc0000" />
+        </LinearLayout>
+
+        <TextureView
+            android:id="@+id/preview"
+            android:layout_width="144px"
+            android:layout_height="176px"
+            android:layout_gravity="center_vertical"
+            android:layout_marginRight="2dip"
+            android:minWidth="26dip"
+            android:minHeight="32dip" />
+    </LinearLayout>
+
+    <!-- 1 -->
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_margin="3dip"
+        android:layout_weight="1"
+        android:background="#505050">
+
+        <TextView
+            android:id="@+id/Seekbar1Text"
+            android:layout_width="55dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="left"
+            android:text="@string/ch_rudder"></TextView>
+
+        <TextView
+            android:id="@+id/DutyCycle1Text"
+            android:layout_width="50dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="right"
+            android:text="0" />
+
+        <SeekBar
+            android:id="@+id/Seekbar1"
+            style="@style/CustomSlider"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dip"
+            android:layout_weight="4"
+            android:gravity="center"
+            android:max="100"
+            android:progress="0" />
+    </LinearLayout>
+
+    <!-- 2 -->
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_margin="3dip"
+        android:layout_weight="1"
+        android:background="#505050">
+
+        <TextView
+            android:id="@+id/Channel1Text"
+            android:layout_width="55dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="left"
+            android:text="@string/ch_aileron"></TextView>
+
+        <TextView
+            android:id="@+id/DutyCycle2Text"
+            android:layout_width="50dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="right"
+            android:text="0" />
+
+        <SeekBar
+            android:id="@+id/Seekbar2"
+            style="@style/CustomSlider"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dip"
+            android:layout_weight="4"
+            android:gravity="center"
+            android:max="100"
+            android:progress="0" />
+    </LinearLayout>
+
+    <!-- 3 -->
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_margin="3dip"
+        android:layout_weight="1"
+        android:background="#505050">
+
+        <TextView
+            android:id="@+id/Channel2Text"
+            android:layout_width="55dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="left"
+            android:text="@string/ch_elevator"></TextView>
+
+        <TextView
+            android:id="@+id/DutyCycle3Text"
+            android:layout_width="50dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="right"
+            android:text="0" />
+
+        <SeekBar
+            android:id="@+id/Seekbar3"
+            style="@style/CustomSlider"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dip"
+            android:layout_weight="4"
+            android:gravity="center"
+            android:max="100"
+            android:progress="0" />
+    </LinearLayout>
+
+    <!-- 4 -->
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_margin="3dip"
+        android:layout_weight="1"
+        android:background="#505050">
+
+        <TextView
+            android:id="@+id/Seekbar4Text"
+            android:layout_width="55dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="left"
+            android:text="@string/ch_throttle"></TextView>
+
+        <TextView
+            android:id="@+id/DutyCycle4Text"
+            android:layout_width="50dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="right"
+            android:text="0" />
+
+        <!-- http://stackoverflow.com/questions/20024622/android-seekbar-with-markers -->
+        <SeekBar
+            android:id="@+id/Seekbar4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="false"
+            android:layout_alignParentBottom="false"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:background="@null"
+            android:indeterminate="false" />
+    </LinearLayout>
+
+    <!-- elevon left (flying wing) -->
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_margin="3dip"
+        android:layout_weight="1"
+        android:background="#505050"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/SeekbarElevonLeftLabel"
+            android:layout_width="55dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="left"
+            android:text="@string/ch_elevon_left"></TextView>
+
+        <TextView
+            android:id="@+id/DutyElevonLeftText"
+            android:layout_width="50dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="right"
+            android:text="0" />
+
+        <SeekBar
+            android:id="@+id/SeekbarElevonLeft"
+            style="@style/CustomSlider"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dip"
+            android:layout_weight="4"
+            android:gravity="center"
+            android:max="100"
+            android:progress="0" />
+    </LinearLayout>
+
+    <!-- elevon right (flying wing) -->
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_margin="3dip"
+        android:layout_weight="1"
+        android:background="#505050"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/SeekbarElevonRightLabel"
+            android:layout_width="55dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="left"
+            android:text="@string/ch_elevon_right"></TextView>
+
+        <TextView
+            android:id="@+id/DutyCycleElevonRightText"
+            android:layout_width="50dp"
+            android:layout_height="fill_parent"
+            android:layout_margin="3dip"
+            android:gravity="right"
+            android:text="0" />
+
+        <SeekBar
+            android:id="@+id/SeekbarElevonRight"
+            style="@style/CustomSlider"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dip"
+            android:layout_weight="4"
+            android:gravity="center"
+            android:max="100"
+            android:progress="0" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/LastRow"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_margin="3dip"
+        android:layout_weight="1"
+        android:background="#505050">
+
+        <Button
+            android:id="@+id/StartPWMminButton"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:layout_margin="1dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/ThrottleMinButton"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:layout_margin="1dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/ThrottleMaxButton"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:layout_margin="1dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/StartPWMmaxButton"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:layout_margin="1dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/ThrottleStopButton"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:layout_margin="1dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="S"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/text_server"
+        android:layout_width="wrap_content"
+        android:layout_height="24dp"></TextView>
+
+    <TextView
+        android:id="@+id/text_feedback"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"></TextView>
+
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:columnCount="7"
+        android:rowCount="2">
+
+        <!-- first row -->
+        <TextView
+            android:id="@+id/Axis0Label"
+            android:layout_width="45dp"
+            android:layout_height="wrap_content"
+            android:layout_row="0"
+            android:layout_column="0"
+            android:layout_weight="1"
+            android:gravity="left"
+            android:text="X:"></TextView>
+
+        <TextView
+            android:id="@+id/Axis1Label"
+            android:layout_width="45dp"
+            android:layout_height="wrap_content"
+            android:layout_row="0"
+            android:layout_column="1"
+            android:layout_weight="1"
+            android:gravity="left"
+            android:text="Y:"></TextView>
+
+        <TextView
+            android:id="@+id/Axis2Label"
+            android:layout_width="45dp"
+            android:layout_height="wrap_content"
+            android:layout_row="0"
+            android:layout_column="2"
+            android:layout_weight="1"
+            android:gravity="left"
+            android:text="Z:"></TextView>
+
+        <TextView
+            android:id="@+id/Angle0Label"
+            android:layout_width="45dp"
+            android:layout_height="wrap_content"
+            android:layout_row="0"
+            android:layout_column="3"
+            android:layout_weight="1"
+            android:gravity="left"
+            android:text="pitch:"></TextView>
+
+        <TextView
+            android:id="@+id/Angle1Label"
+            android:layout_width="45dp"
+            android:layout_height="wrap_content"
+            android:layout_row="0"
+            android:layout_column="4"
+            android:layout_weight="1"
+            android:gravity="left"
+            android:text="roll:"></TextView>
+
+        <TextView
+            android:id="@+id/Angle2Label"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:layout_row="0"
+            android:layout_column="5"
+            android:layout_weight="1"
+            android:gravity="left"
+            android:text="hdg/az:"></TextView>
+
+        <TextView
+            android:id="@+id/AltitudeLabel"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:layout_row="0"
+            android:layout_column="6"
+            android:layout_weight="1"
+            android:gravity="left"
+            android:text="alt (GPS):"></TextView>
+
+        <!-- second row -->
+        <TextView
+            android:id="@+id/Axis0Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_row="1"
+            android:layout_column="0"></TextView>
+
+        <TextView
+            android:id="@+id/Axis1Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_row="1"
+            android:layout_column="1"></TextView>
+
+        <TextView
+            android:id="@+id/Axis2Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_row="1"
+            android:layout_column="2"></TextView>
+
+        <TextView
+            android:id="@+id/Angle0Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_row="1"
+            android:layout_column="3"
+            android:gravity="center"></TextView>
+
+        <TextView
+            android:id="@+id/Angle1Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_row="1"
+            android:layout_column="4"
+            android:gravity="center"></TextView>
+
+        <TextView
+            android:id="@+id/Angle2Text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_row="1"
+            android:layout_column="5"
+            android:gravity="center"></TextView>
+
+        <TextView
+            android:id="@+id/AltitudeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_row="1"
+            android:layout_column="6"
+            android:gravity="center"></TextView>
+    </GridLayout>
+</LinearLayout>

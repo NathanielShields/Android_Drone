@@ -1,0 +1,211 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="Basic channels">
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="1"
+            android:inputType="numberSigned"
+            android:key="outputs-aileron"
+            android:maxLength="8"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="outputs aileron" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="2"
+            android:inputType="numberSigned"
+            android:key="outputs-elevator"
+            android:maxLength="8"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="outputs elevator" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="3"
+            android:inputType="numberSigned"
+            android:key="outputs-throttle"
+            android:maxLength="8"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="outputs throttle" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="4"
+            android:inputType="numberSigned"
+            android:key="outputs-rudder"
+            android:maxLength="8"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="outputs rudder" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Additional channels">
+        <!-- elevons -->
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="6"
+            android:inputType="numberSigned"
+            android:key="outputs-elevon-left"
+            android:maxLength="8"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="outputs elevon left" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="5"
+            android:inputType="numberSigned"
+            android:key="outputs-elevon-right"
+            android:maxLength="8"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="outputs elevon right" />
+
+        <!-- flaperons -->
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="16"
+            android:inputType="numberSigned"
+            android:key="outputs-flaperon-left"
+            android:maxLength="8"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="outputs flaperon left" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="-15"
+            android:inputType="numberSigned"
+            android:key="outputs-flaperon-right"
+            android:maxLength="8"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="outputs flaperon right" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Range of movement">
+        <!-- elevator movement range -->
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="700"
+            android:inputType="number"
+            android:key="servo-elevator-min"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_servo_elevator_min" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="2300"
+            android:inputType="number"
+            android:key="servo-elevator-max"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_servo_elevator_max" />
+
+        <!-- rudder movement range -->
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="500"
+            android:inputType="number"
+            android:key="servo-rudder-min"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_servo_rudder_min" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="2500"
+            android:inputType="number"
+            android:key="servo-rudder-max"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_servo_rudder_max" />
+
+        <!-- elevons movement range (flying wing) -->
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="500"
+            android:inputType="number"
+            android:key="servo-elevon-min"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_servo_elevon_min" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="2500"
+            android:inputType="number"
+            android:key="servo-elevon-max"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_servo_elevon_max" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="1000"
+            android:inputType="number"
+            android:key="throttle-min"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_throttle_min" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="2000"
+            android:inputType="number"
+            android:key="throttle-max"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_throttle_max" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Other">
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="3"
+            android:inputType="number"
+            android:key="period"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_period_title" />
+
+        <EditTextPreference
+            android:capitalize="words"
+            android:defaultValue="0"
+            android:inputType="number"
+            android:key="orientation"
+            android:maxLines="1"
+            android:selectAllOnFocus="true"
+            android:singleLine="true"
+            android:title="@string/pref_title_orientation" />
+
+        <ListPreference
+            android:defaultValue="1"
+            android:entries="@array/pref_camera_list_titles"
+            android:entryValues="@array/pref_camera_list_values"
+            android:key="camera-facing"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:title="@string/pref_title_camera_facing" />
+    </PreferenceCategory>
+</PreferenceScreen>
