@@ -67,6 +67,9 @@ void sendProtocolVersion(int number);
 
 void sendAutopilotVersion();
 
+void send_MISSION_REQUEST_INT(int index, int type);
+void send_MISSION_ACK(int target_system, int target_component, int mission_type);
+uint16_t missionItemCount;
 uint64_t microsSinceEpoch();
 
 #define THIS_SYSTEM 1
@@ -78,10 +81,10 @@ uint64_t microsSinceEpoch();
 
 bool running = false;
 bool heartbeat_running = false;
-static pthread_t heartbeat_thread, rcv_thread;
+static pthread_t heartbeat_thread, rcv_thread, mission_request_timeout_thread;
 static pthread_key_t current_jni_env;
 static JavaVM *java_vm;
-static jmethodID set_message_method_id, set_buttons_method_id, set_address_method_id, set_log_method_id, set_progress_method_id, set_servos_method_id, process_button_method_id, take_photo_method_id, set_sound_method_id, restart_method_id;
+static jmethodID set_message_method_id, set_buttons_method_id, set_address_method_id, set_log_method_id, set_progress_method_id, set_servos_method_id, process_button_method_id, add_waypoint_method_id, take_photo_method_id, set_sound_method_id, restart_method_id;
 
 char groundStationHost[128];
 float hdg = 0;
@@ -242,6 +245,17 @@ static void process_buttons(jobject obj, int16_t buttons) {
     buttons_before = buttons;
 }
 
+static void add_waypoint(jobject obj, double lat, double lon, double ele, int frame, int index) {
+    /** adds waypoint received via MAVLink */
+    JNIEnv *env = get_jni_env();
+
+    (*env)->CallVoidMethod(env, obj, add_waypoint_method_id, lat, lon, ele, frame, index);
+    if ((*env)->ExceptionCheck(env)) {
+        printf("Failed to call Java method");
+        (*env)->ExceptionClear(env);
+    }
+}
+
 static void take_photo(jobject obj, bool value) {
     /** takes a photo */
     JNIEnv *env = get_jni_env();
@@ -310,6 +324,8 @@ jstring Java_pl_bezzalogowe_mavlink_MAVLinkClass_stringFromJNI(JNIEnv *env, jobj
     return (*env)->NewStringUTF(env, "JNI is working");
 }
 
+/** data types mapping: https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/types.html*/
+
 void Java_pl_bezzalogowe_mavlink_MAVLinkClass_classInit(JNIEnv *env, jclass klass) {
     /** binds Java methods that can be called from C code */
     set_message_method_id = (*env)->GetMethodID(env, klass, "setMessage", "(Ljava/lang/String;Z)V");
@@ -319,6 +335,7 @@ void Java_pl_bezzalogowe_mavlink_MAVLinkClass_classInit(JNIEnv *env, jclass klas
     //set_progress_method_id = (*env)->GetMethodID(env, klass, "setProgress", "(SSSS)V");
     set_servos_method_id = (*env)->GetMethodID(env, klass, "setRCchannels", "(SSSS)V");
     process_button_method_id = (*env)->GetMethodID(env, klass, "processButton", "(SZ)V");
+    add_waypoint_method_id = (*env)->GetMethodID(env, klass, "addMAVLinkWaypoint", "(DDDII)V");
     take_photo_method_id = (*env)->GetMethodID(env, klass, "takePhoto", "(Z)V");
     set_sound_method_id = (*env)->GetMethodID(env, klass, "setSound", "(I)V");
     restart_method_id = (*env)->GetMethodID(env, klass, "restartApp", "()V");
@@ -517,15 +534,27 @@ int *openSocket(jobject thiz) {
     /** https://www.binarytides.com/hostname-to-ip-address-c-sockets-linux/ */
 
     char *hostname = groundStationHost;
-    if (!(hostname[0] == 0 && hostname[1] == 0 && hostname[2] == 0 && hostname[3] == 0)) {
-        /** empty string from java code is NULL NULL NULL NULL*/
+    /** empty string from java code is NULL NULL NULL NULL*/
+    if ((hostname[0] == 0 && hostname[1] == 0 && hostname[2] == 0 && hostname[3] == 0)) {
+        /** hostname not passed */
+        set_log_message(thiz, "host name not passed");
+        gcAddr.sin_addr.s_addr = INADDR_ANY;
+        return -1;
+    } else {
         struct hostent *ghbn = gethostbyname(hostname);
+        if (ghbn == NULL)
+        {
+            char seqArr[128];
+            sprintf(seqArr, "invalid host name: %s", hostname);
+            set_log_message(thiz, seqArr);
+            return -1;
+        }
+        else {
         struct in_addr **addr_list;
         addr_list = (struct in_addr **) ghbn->h_addr_list;
         gcAddr.sin_addr = *addr_list[0];
         char seqArr[128];
-        sprintf(seqArr, "host name: %s, gethostbyname returned: \\<%s\\>\n",
-                groundStationHost/*ghbn->h_name*/, inet_ntoa(gcAddr.sin_addr));
+        sprintf(seqArr, "gethostbyname returned: %s (%s)", inet_ntoa(gcAddr.sin_addr), ghbn->h_name);
         set_log_message(thiz, seqArr);
 /*
 for (int i = 0; i < sizeof(addr_list)/sizeof(addr_list[0]) ; i++) {
@@ -535,13 +564,7 @@ for (int i = 0; i < sizeof(addr_list)/sizeof(addr_list[0]) ; i++) {
 }
  */
         return 0;
-    } else {
-        /** fallback, any address */
-        char seqArr[128];
-        sprintf(seqArr, "host name: %s", hostname);
-        set_log_message(thiz, seqArr);
-        gcAddr.sin_addr.s_addr = INADDR_ANY;
-        return -1;
+    }
     }
 }
 
@@ -553,15 +576,20 @@ int *receiveFunction(jobject thiz) {
     int i = 0;
     unsigned int temp = 0;
 
+    missionItemCount = 0;
+
     while (running) {
         memset(rcv_buf, 0, BUFFER_LENGTH);
         recsize = recvfrom(sock, (void *) rcv_buf, BUFFER_LENGTH, 0, (struct sockaddr *) &gcAddr, &fromlen);
-        if (recsize > 0) {
-            // Something received - print out all bytes and parse packet.
+
+        /*INADDR_LOOPBACK is in different endianness*/
+        /** https://linux.die.net/man/3/inet_ntoa */
+        if (recsize > 0 && gcAddr.sin_addr.s_addr != 0x100007f) {
+            // Something received - process it.
+            //printf("Bytes Received from: %s\n", inet_ntoa(gcAddr.sin_addr));
             mavlink_message_t rcv_msg;
             mavlink_status_t status;
             char feedback[128];
-            //printf("Bytes Received from: %s\n", inet_ntoa(gcAddr.sin_addr));
 
             for (i = 0; i < recsize; ++i) {
                 /*
@@ -570,17 +598,13 @@ int *receiveFunction(jobject thiz) {
                 */
                 if (mavlink_parse_char(MAVLINK_COMM_0, rcv_buf[i], &rcv_msg, &status) == 1) {
                     /* Packet received */
-                    //printf("\nReceived packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", rcv_msg.sysid, rcv_msg.compid, rcv_msg.len, rcv_msg.msgid);
+                    printf("\nReceived packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", rcv_msg.sysid, rcv_msg.compid, rcv_msg.len, rcv_msg.msgid);
 
                     switch (rcv_msg.msgid) {
                         case 0: {
                             /** https://mavlink.io/en/messages/common.html#HEARTBEAT */
                             //sprintf(feedback, "MSG ID: HEARTBEAT, SEQ: %d", rcv_msg.seq);
                             //set_log_message(thiz, feedback);
-
-                            /** https://linux.die.net/man/3/inet_ntoa */
-                            sprintf(feedback, "MSG ID: HEARTBEAT, SEQ: %d", rcv_msg.seq);
-                            set_log_message(thiz, feedback);
 
                             /* will blink the GCS address every time a heartbeat message is received */
                             //char feedback_ui[64];
@@ -592,14 +616,19 @@ int *receiveFunction(jobject thiz) {
                             last_beat_time = (tv.tv_sec % 1000000) * 1000 + tv.tv_usec / 1000;
 
                             if (communication == false) {
-                                /* communication regained */
-                                char message[128];
-                                sprintf(message, "communication regained with: %s\n",
-                                        inet_ntoa(gcAddr.sin_addr));
-                                set_ui_message(thiz, message, true);
-                                set_log_message(thiz, message);
-                                set_sound(thiz, 1);
-                                communication = true;
+                               /*
+                                if (gcAddr.sin_addr.s_addr != 0x100007f)
+                                {}
+                                */
+
+                                    /* communication regained */
+                                    char message[256];
+                                    sprintf(message, "communication regained with: %s (%x)\n",
+                                            inet_ntoa(gcAddr.sin_addr), gcAddr.sin_addr.s_addr);
+                                    set_ui_message(thiz, message, true);
+                                    set_log_message(thiz, message);
+                                    set_sound(thiz, 1);
+                                    communication = true;
                             }
                         }
                             break;
@@ -638,7 +667,47 @@ int *receiveFunction(jobject thiz) {
                                     request_list.mission_type);
                             set_log_message(thiz, feedback);
 
-                            sendMissionCount(rcv_msg.sysid, rcv_msg.compid, request_list);
+                        }
+                            break;
+                        case 44: {
+                            /** https://mavlink.io/en/messages/common.html#MISSION_COUNT */
+                            set_ui_message(thiz, "MISSION_COUNT", true);
+                            missionItemCount = mavlink_msg_mission_count_get_count(&rcv_msg);
+
+                            /** https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE */
+                            sprintf(feedback,
+                                    "MSG ID: MISSION_COUNT, SYS: %d, COMP: %d, LEN: %d, SEQ: %d, count: %d",
+                                    rcv_msg.sysid, rcv_msg.compid, rcv_msg.len, rcv_msg.seq,
+                                    missionItemCount);
+                            set_log_message(thiz, feedback);
+
+                            /** https://mavlink.io/en/services/mission.html#uploading_mission */
+                            uint8_t mission_type = mavlink_msg_mission_count_get_mission_type(&rcv_msg);
+
+                            // requesting initial item
+                            if (missionItemCount > 0) {
+                            if (mission_type == MAV_MISSION_TYPE_MISSION) {
+                                /** https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE_MISSION */
+                                send_MISSION_REQUEST_INT(0, MAV_MISSION_TYPE_MISSION);
+                                sprintf(feedback, "Mission type is: mission");
+                            }
+                            else if (mission_type == MAV_MISSION_TYPE_FENCE) {
+                                //TODO: https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE_FENCE
+                                send_MISSION_ACK(rcv_msg.sysid, rcv_msg.compid, mission_type);
+                                //send_MISSION_REQUEST_INT(0, MAV_MISSION_TYPE_FENCE);
+                                sprintf(feedback, "Mission type is: fence");
+                            }
+                            else if (mission_type == MAV_MISSION_TYPE_RALLY) {
+                                //TODO: https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE_RALLY
+                                send_MISSION_REQUEST_INT(0, MAV_MISSION_TYPE_RALLY);
+                                sprintf(feedback, "Mission type is: rally");
+                            }
+                            else {
+                                send_MISSION_REQUEST_INT(0, mission_type);
+                                sprintf(feedback, "Mission type is: %d", mission_type);
+                            }
+                                set_log_message(thiz, feedback);
+                        }
                         }
                             break;
                         case 47: {
@@ -660,6 +729,71 @@ int *receiveFunction(jobject thiz) {
                             process_buttons(thiz, manual_control.buttons);
                             set_servos(thiz, manual_control.x, manual_control.y, manual_control.z,
                                        manual_control.r);
+                        }
+                            break;
+                        case 73: {
+                            /** https://mavlink.io/en/messages/common.html#MISSION_ITEM_INT */
+                            mavlink_mission_item_int_t content;
+                            mavlink_msg_mission_item_int_decode(&rcv_msg, &content);
+
+                            sprintf(feedback,
+                                    "MSG ID: MISSION_ITEM_INT, SYS: %d, COMP: %d, LEN: %d, SEQ: %d",
+                                    rcv_msg.sysid, rcv_msg.compid, rcv_msg.len, content.seq);
+                            set_log_message(thiz, feedback);
+
+                            if (content.frame == MAV_FRAME_GLOBAL || content.frame == MAV_FRAME_GLOBAL_RELATIVE_ALT)
+                            {
+                                /**
+                                 x = latitude in degrees * 10^7
+                                 y = longitude in degrees * 10^7
+                                 x = altitude in meters (relative or absolute, depending on frame
+                                 */
+                                add_waypoint(thiz, ((double) content.x)/10000000,((double) content.y)/10000000, (double) content.z, content.frame, content.seq);
+                            }
+                            else
+                            {
+                                sprintf(feedback, "Frame: %d", content.frame);
+                                set_log_message(thiz, feedback);
+                            }
+
+                            /** stop timeout */
+                            pthread_join(mission_request_timeout_thread, NULL);
+
+                            uint8_t mission_type = mavlink_msg_mission_item_int_get_mission_type(&rcv_msg);
+                            if (content.seq < missionItemCount -1) {
+                                /** send next request */
+                                sprintf(feedback, "requesting: %d", content.seq + 1);
+                                set_log_message(thiz, feedback);
+
+                                if (missionItemCount > 0) {
+                                    if (mission_type == MAV_MISSION_TYPE_MISSION) {
+                                        send_MISSION_REQUEST_INT(content.seq + 1, MAV_MISSION_TYPE_MISSION);
+                                        sprintf(feedback, "Mission type is: mission");
+                                    }
+                                    else if (mission_type == MAV_MISSION_TYPE_FENCE) {
+                                        send_MISSION_REQUEST_INT(content.seq + 1, MAV_MISSION_TYPE_FENCE);
+                                        sprintf(feedback, "Mission type is: fence");
+                                    }
+                                    else if (mission_type == MAV_MISSION_TYPE_RALLY) {
+                                        send_MISSION_REQUEST_INT(content.seq + 1, MAV_MISSION_TYPE_RALLY);
+                                        sprintf(feedback, "Mission type is: rally");
+                                    }
+                                    else {
+                                        send_MISSION_REQUEST_INT(content.seq + 1, mission_type);
+                                        sprintf(feedback, "Mission type is: %d", mission_type);
+                                    }
+                                    set_log_message(thiz, feedback);
+                            }
+                            }
+                            if (content.seq == missionItemCount -1)
+                            {
+                                sprintf(feedback, "content.seq = %d -1", missionItemCount);
+                                set_log_message(thiz, feedback);
+                                //FIXME: failed to send final ACK
+                                send_MISSION_ACK(content.target_system, content.target_component, mission_type);
+                                set_sound(thiz, 1);
+                            }
+
                         }
                             break;
                         case 75: {
@@ -711,12 +845,12 @@ int *heartbeatFunction(jobject thiz) {
             bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr *) &gcAddr,
                                 sizeof(struct sockaddr_in));
 
-            /* prints a log entry every time a heartbeat message is sent */
-
+//prints a log entry every time a heartbeat message is sent
+/*
             char seqArr[32];
             sprintf(seqArr, "heartbeat sent: %d\n", msg.seq);
             set_log_message(thiz, seqArr);
-
+*/
             if (battery_voltage != 0 && battery_level != 0) {
                 mavlink_msg_sys_status_pack(THIS_SYSTEM, THIS_COMPONENT, &msg, 0, 0, 0, 500,
                                             battery_voltage, -1, battery_level, 0, 0, 0, 0, 0, 0);
@@ -735,7 +869,7 @@ int *heartbeatFunction(jobject thiz) {
             gettimeofday(&tv, NULL);
             current_time = (tv.tv_sec % 1000000) * 1000 + tv.tv_usec / 1000;
 
-            if (communication && (current_time > last_beat_time + 1999)) {
+            if (communication && last_beat_time != NULL && (current_time > last_beat_time + 1999)) {
                 /* communication lost */
                 set_ui_message(thiz, "communication lost", true);
                 set_log_message(thiz, "communication lost");
@@ -755,6 +889,13 @@ int *heartbeatFunction(jobject thiz) {
     return 0;
 }
 
+
+int *mission_request_timeout_function() {
+    usleep(1000);
+    printf("ERROR: MISSION_REQUEST_INT timeout has elapsed");
+    return 0;
+}
+
 jint Java_pl_bezzalogowe_mavlink_MAVLinkClass_receiveInit(JNIEnv *env, jobject thiz) {
     jobject *data = (*env)->NewGlobalRef(env, thiz);
     set_ui_message(thiz, "started receiving thread", false);
@@ -767,7 +908,6 @@ jint Java_pl_bezzalogowe_mavlink_MAVLinkClass_receiveInit(JNIEnv *env, jobject t
 }
 
 jint Java_pl_bezzalogowe_mavlink_MAVLinkClass_receiveStop(JNIEnv *env, jobject thiz) {
-
     set_ui_message(thiz, "stopped receiving thread", false);
     running = false;
     pthread_join(rcv_thread, NULL);
@@ -783,7 +923,6 @@ jint Java_pl_bezzalogowe_mavlink_MAVLinkClass_heartBeatInit(JNIEnv *env, jobject
 }
 
 jint Java_pl_bezzalogowe_mavlink_MAVLinkClass_heartBeatStop(JNIEnv *env, jobject thiz) {
-
     set_ui_message(thiz, "stopped heartbeat thread", false);
     heartbeat_running = false;
     pthread_join(heartbeat_thread, NULL);
@@ -800,9 +939,16 @@ void sendACK(mavlink_command_long_t command_long) {
 }
 
 void sendProtocolVersion(int number) {
+    /* https://mavlink.io/en/messages/common.html#PROTOCOL_VERSION */
     mavlink_message_t message;
-    mavlink_protocol_version_t *version = number;
-    mavlink_msg_protocol_version_encode(THIS_SYSTEM, THIS_COMPONENT, &message, &version);
+    mavlink_protocol_version_t *ver;
+//FIXME: does nothing
+/*
+    ver->version = number;
+    ver->min_version = 100;
+    ver->max_version = number;
+*/
+    mavlink_msg_protocol_version_encode(THIS_SYSTEM, THIS_COMPONENT, &message, &ver);
     uint16_t len;
     len = mavlink_msg_to_send_buffer(buf, &message);
     bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr *) &gcAddr, sizeof(struct sockaddr_in));
@@ -834,6 +980,27 @@ jint Java_pl_bezzalogowe_mavlink_MAVLinkClass_sendHello(JNIEnv *env, jobject thi
     char feedback[128];
     sprintf(feedback, "sent: %s, %d bytes", message, bytes_sent);
     set_ui_message(thiz, feedback, false);
+}
+
+/** https://mavlink.io/en/messages/common.html#MISSION_REQUEST_INT */
+void send_MISSION_REQUEST_INT(int index, int type) {
+    mavlink_message_t message;
+    mavlink_msg_mission_request_int_pack(THIS_SYSTEM, THIS_COMPONENT, &message, 0, 0, index, type);
+    uint16_t len;
+    len = mavlink_msg_to_send_buffer(buf, &message);
+    bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr *) &gcAddr, sizeof(struct sockaddr_in));
+
+    /** start timeout */
+    pthread_create(&mission_request_timeout_thread, NULL, &mission_request_timeout_function, NULL);
+}
+
+/** https://mavlink.io/en/messages/common.html#MISSION_ACK */
+void send_MISSION_ACK(int target_system, int target_component, int mission_type) {
+    mavlink_message_t message;
+    mavlink_msg_mission_ack_pack(THIS_SYSTEM, THIS_COMPONENT, &message, target_system, target_component, MAV_MISSION_ACCEPTED, mission_type);
+    uint16_t len;
+    len = mavlink_msg_to_send_buffer(buf, &message);
+    bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr *) &gcAddr, sizeof(struct sockaddr_in));
 }
 
 /* QNX timer version */

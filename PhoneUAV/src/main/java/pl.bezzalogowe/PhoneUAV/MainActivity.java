@@ -120,7 +120,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     Gravity gravityObject = new Gravity(this);
     Magnetometer magObject = new Magnetometer(this);
     Barometer pressureObject = new Barometer(this);
-    Location locObject = new Location(this);
+    public Location locObject = new Location(this);
     LogGPX logGPX = new LogGPX(this);
     /* needed for USB device permission */
     public final BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {

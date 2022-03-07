@@ -48,7 +48,7 @@ public class Location extends Thread {
         main = argActivity;
     }
 
-    /** converts one double to an array of 8 bytes */
+    /* converts one double to an array of 8 bytes */
     public static final byte[] double2Bytes(double inData) {
         long bits = Double.doubleToLongBits(inData);
         byte[] buffer = {(byte) (bits & 0xff),
@@ -62,7 +62,7 @@ public class Location extends Thread {
         return buffer;
     }
 
-    /** converts an array of doubles to an array of bytes */
+    /* converts an array of doubles to an array of bytes */
     public static final byte[] doubleArray2Bytes(double[] inArray) {
         int j = 0;
         int length = inArray.length;
@@ -81,7 +81,7 @@ public class Location extends Thread {
         return out;
     }
 
-    /** converts an array of bytes to a double */
+    /* converts an array of bytes to a double */
     public static final double bytesArray2Double(byte[] input) {
         System.out.println(Arrays.toString(input) + "\n");
         byte[] reverse = new byte[]{input[7], input[6], input[5], input[4], input[3], input[2], input[1], input[0]};
@@ -141,7 +141,7 @@ public class Location extends Thread {
             main.mavLink.sendGlobalPosition(recentLocation.getLatitude(), recentLocation.getLongitude(), main.pressureObject.altitudeBarometricRecent, main.pressureObject.altitudeBarometricRecent - takeoff_altitude);
         }
 
-/* saves location online */
+        /* saves location online */
         Time timeLocal = new Time();
         timeLocal.setToNow();
 
@@ -162,7 +162,7 @@ public class Location extends Thread {
             Log.d(TAG, e.toString());
         }
 
-/* saves location to a GPX file */
+        /* saves location to a GPX file */
         try {
             main.logGPX.saveTrackpoint(
                     recentLocation.getLatitude(),
@@ -176,7 +176,7 @@ public class Location extends Thread {
             e.printStackTrace();
         }
 
-/* saves data to a SRT (SubRip) file */
+        /* saves data to a SRT (SubRip) file */
         try {
             main.logSubRip.saveTrackpoint(
                     recentLocation.getTime(),
@@ -188,7 +188,7 @@ public class Location extends Thread {
             e.printStackTrace();
         }
 
-/* sends location over UDP (must be done in a separate thread) */
+        /* sends location over UDP (must be done in a separate thread) */
         Thread feedbackLocation = new Thread(new Wrap());
         feedbackLocation.start();
 
@@ -258,11 +258,21 @@ public class Location extends Thread {
         }
     }
 
-    public void addWaypoint(double lat, double lon, double ele) {
-        route.add(new Waypoint(lat, lon, ele));
-        System.out.println("Waypoint added: " + lat + ", " + lon + ", " + ele);
-        Log.d(TAG, "Waypoint " + lat + ", " + lon + ", " + ele + " added");
-        //main.update.updateConversationHandler.post(new updateTextThread(main.text_server, lat + ", " + lon + ", " + ele + " added"));
+    /* allows for clearing the route from MAVLink class */
+    public void flushWaypoints() {
+        route.clear();
+    }
+
+    public void addWaypoint(double lat, double lon, double ele, int frame) {
+        /* latitude (szerokość), longitude (długość), elevation, frame of reference */
+        if (frame == 0) {
+            /* https://mavlink.io/en/messages/common.html#MAV_FRAME_GLOBAL */
+            route.add(new Waypoint(lat, lon, ele));
+        } else if (frame == 3) {
+            /* https://mavlink.io/en/messages/common.html#MAV_FRAME_GLOBAL_RELATIVE_ALT */
+            route.add(new Waypoint(lat, lon, ele + takeoff_altitude));
+        }
+        System.out.println("Waypoint added: " + lat + "°, " + lon + "°, " + ele + " m (" + route.size() + " waypoints now)");
     }
 
     public int nextWaypoint() {
@@ -273,7 +283,7 @@ public class Location extends Thread {
             waypointNext.setLatitude(read.lat);
             waypointNext.setLongitude(read.lon);
             waypointNext.setAltitude(read.ele);
-            Log.d(TAG, "Waypoint " + read.lat + ", " + read.lon + ", " + read.ele + " polled/removed, " + route.size() + " left");
+            Log.d(TAG, "Waypoint " + read.lat + ", " + read.lon + ", " + read.ele + " polled/removed, " + route.size() + " waypoints left");
         } catch (java.util.NoSuchElementException e) {
             e.printStackTrace();
             main.update.updateConversationHandler.post(new updateTextThread(main.text_server, "no more waypoints left"));
@@ -291,14 +301,14 @@ public class Location extends Thread {
         public double lon;
         public double ele;
 
-        // constructor with latitude and longitude
+        /* constructor with latitude and longitude */
         public Waypoint(double argLat, double argLon) {
             super();
             this.lat = argLat;
             this.lon = argLon;
         }
 
-        // constructor with latitude, longitude and elevation
+        /* constructor with latitude, longitude and elevation */
         public Waypoint(double argLat, double argLon, double argElevation) {
             super();
             this.lat = argLat;
@@ -307,7 +317,7 @@ public class Location extends Thread {
         }
     }
 
-    /* Don't use XML for receiving flight plan. Use MAVLink instead. */
+    /* not used */
     class ReadXMLfromURL extends Thread {
         @Override
         public void run() {
