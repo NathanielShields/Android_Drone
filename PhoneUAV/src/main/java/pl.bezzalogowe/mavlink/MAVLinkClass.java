@@ -229,12 +229,24 @@ public class MAVLinkClass {
         }
     }
 
-    private void addMAVLinkWaypoint(double lat, double lon, double ele, int frame, int index) {
-        if (index == 0) {
-            /* if the index is 0 it means a fresh route is being sent and the old one must be flushed first */
-            main.locObject.flushWaypoints();
+    private void addMAVLinkWaypoint(double lat, double lon, double ele, int type, int frame, int index) {
+        if (type == 0)
+        {
+            /** MAV_MISSION_TYPE_MISSION */
+            if (index == 0) {
+                /* if the index is 0 it means a fresh route is being sent and the old one must be flushed first */
+                main.locObject.flushWaypoints();
+            }
+            main.locObject.addWaypoint(lat, lon, ele, frame);
         }
-        main.locObject.addWaypoint(lat, lon, ele, frame);
+        else if (type == 1)
+        {
+            //TODO: MAV_MISSION_TYPE_FENCE
+        }
+        else if (type == 2)
+        {
+            //TODO: MAV_MISSION_TYPE_RALLY
+        }
     }
 
     private void takePhoto(boolean value) {

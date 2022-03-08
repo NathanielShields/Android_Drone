@@ -68,8 +68,11 @@ void sendProtocolVersion(int number);
 void sendAutopilotVersion();
 
 void send_MISSION_REQUEST_INT(int index, int type);
+
 void send_MISSION_ACK(int target_system, int target_component, int mission_type);
+
 uint16_t missionItemCount;
+
 uint64_t microsSinceEpoch();
 
 #define THIS_SYSTEM 1
@@ -245,11 +248,11 @@ static void process_buttons(jobject obj, int16_t buttons) {
     buttons_before = buttons;
 }
 
-static void add_waypoint(jobject obj, double lat, double lon, double ele, int frame, int index) {
+static void add_waypoint(jobject obj, double lat, double lon, double ele, int type, int frame, int index) {
     /** adds waypoint received via MAVLink */
     JNIEnv *env = get_jni_env();
 
-    (*env)->CallVoidMethod(env, obj, add_waypoint_method_id, lat, lon, ele, frame, index);
+    (*env)->CallVoidMethod(env, obj, add_waypoint_method_id, lat, lon, ele, type, frame, index);
     if ((*env)->ExceptionCheck(env)) {
         printf("Failed to call Java method");
         (*env)->ExceptionClear(env);
@@ -335,7 +338,7 @@ void Java_pl_bezzalogowe_mavlink_MAVLinkClass_classInit(JNIEnv *env, jclass klas
     //set_progress_method_id = (*env)->GetMethodID(env, klass, "setProgress", "(SSSS)V");
     set_servos_method_id = (*env)->GetMethodID(env, klass, "setRCchannels", "(SSSS)V");
     process_button_method_id = (*env)->GetMethodID(env, klass, "processButton", "(SZ)V");
-    add_waypoint_method_id = (*env)->GetMethodID(env, klass, "addMAVLinkWaypoint", "(DDDII)V");
+    add_waypoint_method_id = (*env)->GetMethodID(env, klass, "addMAVLinkWaypoint", "(DDDIII)V");
     take_photo_method_id = (*env)->GetMethodID(env, klass, "takePhoto", "(Z)V");
     set_sound_method_id = (*env)->GetMethodID(env, klass, "setSound", "(I)V");
     restart_method_id = (*env)->GetMethodID(env, klass, "restartApp", "()V");
@@ -351,8 +354,7 @@ Java_pl_bezzalogowe_mavlink_MAVLinkClass_setGroundStationIP(JNIEnv *env, jclass 
 }
 
 void
-Java_pl_bezzalogowe_mavlink_MAVLinkClass_setHeadingDegrees(JNIEnv *env, jclass klass,
-                                                           double heading) {
+Java_pl_bezzalogowe_mavlink_MAVLinkClass_setHeadingDegrees(JNIEnv *env, jclass klass, double heading) {
     if (running) {
         /* https://stackoverflow.com/questions/14920675/is-there-a-function-in-c-language-to-calculate-degrees-radians */
         hdg = heading * M_PI / 180.0;
@@ -542,20 +544,19 @@ int *openSocket(jobject thiz) {
         return -1;
     } else {
         struct hostent *ghbn = gethostbyname(hostname);
-        if (ghbn == NULL)
-        {
+        if (ghbn == NULL) {
             char seqArr[128];
             sprintf(seqArr, "invalid host name: %s", hostname);
             set_log_message(thiz, seqArr);
             return -1;
-        }
-        else {
-        struct in_addr **addr_list;
-        addr_list = (struct in_addr **) ghbn->h_addr_list;
-        gcAddr.sin_addr = *addr_list[0];
-        char seqArr[128];
-        sprintf(seqArr, "gethostbyname returned: %s (%s)", inet_ntoa(gcAddr.sin_addr), ghbn->h_name);
-        set_log_message(thiz, seqArr);
+        } else {
+            struct in_addr **addr_list;
+            addr_list = (struct in_addr **) ghbn->h_addr_list;
+            gcAddr.sin_addr = *addr_list[0];
+            char seqArr[128];
+            sprintf(seqArr, "gethostbyname returned: %s (%s)", inet_ntoa(gcAddr.sin_addr),
+                    ghbn->h_name);
+            set_log_message(thiz, seqArr);
 /*
 for (int i = 0; i < sizeof(addr_list)/sizeof(addr_list[0]) ; i++) {
     char seqArr[128];
@@ -563,8 +564,8 @@ for (int i = 0; i < sizeof(addr_list)/sizeof(addr_list[0]) ; i++) {
     set_log_message(thiz, seqArr);
 }
  */
-        return 0;
-    }
+            return 0;
+        }
     }
 }
 
@@ -580,7 +581,8 @@ int *receiveFunction(jobject thiz) {
 
     while (running) {
         memset(rcv_buf, 0, BUFFER_LENGTH);
-        recsize = recvfrom(sock, (void *) rcv_buf, BUFFER_LENGTH, 0, (struct sockaddr *) &gcAddr, &fromlen);
+        recsize = recvfrom(sock, (void *) rcv_buf, BUFFER_LENGTH, 0, (struct sockaddr *) &gcAddr,
+                           &fromlen);
 
         /*INADDR_LOOPBACK is in different endianness*/
         /** https://linux.die.net/man/3/inet_ntoa */
@@ -598,7 +600,8 @@ int *receiveFunction(jobject thiz) {
                 */
                 if (mavlink_parse_char(MAVLINK_COMM_0, rcv_buf[i], &rcv_msg, &status) == 1) {
                     /* Packet received */
-                    printf("\nReceived packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", rcv_msg.sysid, rcv_msg.compid, rcv_msg.len, rcv_msg.msgid);
+                    printf("\nReceived packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n",
+                           rcv_msg.sysid, rcv_msg.compid, rcv_msg.len, rcv_msg.msgid);
 
                     switch (rcv_msg.msgid) {
                         case 0: {
@@ -616,19 +619,19 @@ int *receiveFunction(jobject thiz) {
                             last_beat_time = (tv.tv_sec % 1000000) * 1000 + tv.tv_usec / 1000;
 
                             if (communication == false) {
-                               /*
-                                if (gcAddr.sin_addr.s_addr != 0x100007f)
-                                {}
-                                */
+                                /*
+                                 if (gcAddr.sin_addr.s_addr != 0x100007f)
+                                 {}
+                                 */
 
-                                    /* communication regained */
-                                    char message[256];
-                                    sprintf(message, "communication regained with: %s (%x)\n",
-                                            inet_ntoa(gcAddr.sin_addr), gcAddr.sin_addr.s_addr);
-                                    set_ui_message(thiz, message, true);
-                                    set_log_message(thiz, message);
-                                    set_sound(thiz, 1);
-                                    communication = true;
+                                /* communication regained */
+                                char message[256];
+                                sprintf(message, "communication regained with: %s (%x)\n",
+                                        inet_ntoa(gcAddr.sin_addr), gcAddr.sin_addr.s_addr);
+                                set_ui_message(thiz, message, true);
+                                set_log_message(thiz, message);
+                                set_sound(thiz, 1);
+                                communication = true;
                             }
                         }
                             break;
@@ -660,13 +663,13 @@ int *receiveFunction(jobject thiz) {
                             set_ui_message(thiz, "MISSION_REQUEST_LIST", true);
                             mavlink_mission_request_list_t request_list;
                             mavlink_msg_mission_request_list_decode(&rcv_msg, &request_list);
-                            /** https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE */
-                            sprintf(feedback,
-                                    "MSG ID: MISSION_REQUEST_LIST, SYS: %d, COMP: %d, LEN: %d, SEQ: %d, mission_type: %d",
+
+                            sprintf(feedback, "MSG ID: MISSION_REQUEST_LIST, SYS: %d, COMP: %d, LEN: %d, SEQ: %d, mission_type: %d",
                                     rcv_msg.sysid, rcv_msg.compid, rcv_msg.len, rcv_msg.seq,
                                     request_list.mission_type);
                             set_log_message(thiz, feedback);
 
+                            sendMissionCount(rcv_msg.sysid, rcv_msg.compid, request_list);
                         }
                             break;
                         case 44: {
@@ -674,48 +677,51 @@ int *receiveFunction(jobject thiz) {
                             set_ui_message(thiz, "MISSION_COUNT", true);
                             missionItemCount = mavlink_msg_mission_count_get_count(&rcv_msg);
 
-                            /** https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE */
-                            sprintf(feedback,
-                                    "MSG ID: MISSION_COUNT, SYS: %d, COMP: %d, LEN: %d, SEQ: %d, count: %d",
+                            mavlink_mission_item_int_t content;
+                            mavlink_msg_mission_item_int_decode(&rcv_msg, &content);
+
+                            sprintf(feedback, "MSG ID: MISSION_COUNT, SYS: %d, COMP: %d, LEN: %d, SEQ: %d, count: %d",
                                     rcv_msg.sysid, rcv_msg.compid, rcv_msg.len, rcv_msg.seq,
                                     missionItemCount);
                             set_log_message(thiz, feedback);
 
                             /** https://mavlink.io/en/services/mission.html#uploading_mission */
-                            uint8_t mission_type = mavlink_msg_mission_count_get_mission_type(&rcv_msg);
+                            uint8_t mission_type = mavlink_msg_mission_count_get_mission_type(
+                                    &rcv_msg);
 
                             // requesting initial item
                             if (missionItemCount > 0) {
-                            if (mission_type == MAV_MISSION_TYPE_MISSION) {
-                                /** https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE_MISSION */
-                                send_MISSION_REQUEST_INT(0, MAV_MISSION_TYPE_MISSION);
-                                sprintf(feedback, "Mission type is: mission");
-                            }
-                            else if (mission_type == MAV_MISSION_TYPE_FENCE) {
-                                //TODO: https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE_FENCE
-                                send_MISSION_ACK(rcv_msg.sysid, rcv_msg.compid, mission_type);
-                                //send_MISSION_REQUEST_INT(0, MAV_MISSION_TYPE_FENCE);
-                                sprintf(feedback, "Mission type is: fence");
-                            }
-                            else if (mission_type == MAV_MISSION_TYPE_RALLY) {
-                                //TODO: https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE_RALLY
-                                send_MISSION_REQUEST_INT(0, MAV_MISSION_TYPE_RALLY);
-                                sprintf(feedback, "Mission type is: rally");
-                            }
-                            else {
-                                send_MISSION_REQUEST_INT(0, mission_type);
-                                sprintf(feedback, "Mission type is: %d", mission_type);
-                            }
+                                if (mission_type == MAV_MISSION_TYPE_MISSION) {
+                                    /** https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE_MISSION */
+                                    send_MISSION_REQUEST_INT(0, MAV_MISSION_TYPE_MISSION);
+                                    sprintf(feedback, "Initial item mission type is: mission");
+                                } else if (mission_type == MAV_MISSION_TYPE_FENCE) {
+                                    /** https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE_FENCE */
+                                    send_MISSION_REQUEST_INT(0, MAV_MISSION_TYPE_FENCE);
+                                    sprintf(feedback, "Initial item mission type is: fence");
+                                } else if (mission_type == MAV_MISSION_TYPE_RALLY) {
+                                    /** https://mavlink.io/en/messages/common.html#MAV_MISSION_TYPE_RALLY */
+                                    send_MISSION_REQUEST_INT(0, MAV_MISSION_TYPE_RALLY);
+                                    sprintf(feedback, "Initial item mission type is: rally");
+                                } else {
+                                    send_MISSION_REQUEST_INT(0, mission_type);
+                                    sprintf(feedback, "Initial item mission type is: %d",
+                                            mission_type);
+                                }
                                 set_log_message(thiz, feedback);
-                        }
+                            } else {
+                                // list has zero items
+                                sprintf(feedback, "content.seq = 0, mission type = %d", missionItemCount, mission_type);
+                                set_log_message(thiz, feedback);
+                                send_MISSION_ACK(content.target_system, content.target_component, mission_type);
+                            }
                         }
                             break;
                         case 47: {
                             /** https://mavlink.io/en/messages/common.html#MISSION_ACK */
                             set_ui_message(thiz, "MISSION_ACK", true);
 
-                            sprintf(feedback,
-                                    "MSG ID: MISSION_ACK, SYS: %d, COMP: %d, LEN: %d, SEQ: %d",
+                            sprintf(feedback, "MSG ID: MISSION_ACK, SYS: %d, COMP: %d, LEN: %d, SEQ: %d",
                                     rcv_msg.sysid, rcv_msg.compid, rcv_msg.len,
                                     rcv_msg.seq);
                             set_log_message(thiz, feedback);
@@ -741,17 +747,16 @@ int *receiveFunction(jobject thiz) {
                                     rcv_msg.sysid, rcv_msg.compid, rcv_msg.len, content.seq);
                             set_log_message(thiz, feedback);
 
-                            if (content.frame == MAV_FRAME_GLOBAL || content.frame == MAV_FRAME_GLOBAL_RELATIVE_ALT)
-                            {
+                            if (content.frame == MAV_FRAME_GLOBAL ||
+                                content.frame == MAV_FRAME_GLOBAL_RELATIVE_ALT) {
                                 /**
                                  x = latitude in degrees * 10^7
                                  y = longitude in degrees * 10^7
                                  x = altitude in meters (relative or absolute, depending on frame
                                  */
-                                add_waypoint(thiz, ((double) content.x)/10000000,((double) content.y)/10000000, (double) content.z, content.frame, content.seq);
-                            }
-                            else
-                            {
+                                add_waypoint(thiz, ((double) content.x) / 10000000,
+                                             ((double) content.y) / 10000000, (double) content.z, content.mission_type, content.frame, content.seq);
+                            } else {
                                 sprintf(feedback, "Frame: %d", content.frame);
                                 set_log_message(thiz, feedback);
                             }
@@ -759,41 +764,40 @@ int *receiveFunction(jobject thiz) {
                             /** stop timeout */
                             pthread_join(mission_request_timeout_thread, NULL);
 
-                            uint8_t mission_type = mavlink_msg_mission_item_int_get_mission_type(&rcv_msg);
-                            if (content.seq < missionItemCount -1) {
+                            uint8_t mission_type = mavlink_msg_mission_item_int_get_mission_type(
+                                    &rcv_msg);
+                            if (content.seq < missionItemCount - 1) {
                                 /** send next request */
                                 sprintf(feedback, "requesting: %d", content.seq + 1);
                                 set_log_message(thiz, feedback);
 
                                 if (missionItemCount > 0) {
                                     if (mission_type == MAV_MISSION_TYPE_MISSION) {
-                                        send_MISSION_REQUEST_INT(content.seq + 1, MAV_MISSION_TYPE_MISSION);
-                                        sprintf(feedback, "Mission type is: mission");
-                                    }
-                                    else if (mission_type == MAV_MISSION_TYPE_FENCE) {
-                                        send_MISSION_REQUEST_INT(content.seq + 1, MAV_MISSION_TYPE_FENCE);
-                                        sprintf(feedback, "Mission type is: fence");
-                                    }
-                                    else if (mission_type == MAV_MISSION_TYPE_RALLY) {
-                                        send_MISSION_REQUEST_INT(content.seq + 1, MAV_MISSION_TYPE_RALLY);
-                                        sprintf(feedback, "Mission type is: rally");
-                                    }
-                                    else {
+                                        send_MISSION_REQUEST_INT(content.seq + 1,
+                                                                 MAV_MISSION_TYPE_MISSION);
+                                        sprintf(feedback, "Item mission type is: mission");
+                                    } else if (mission_type == MAV_MISSION_TYPE_FENCE) {
+                                        send_MISSION_REQUEST_INT(content.seq + 1,
+                                                                 MAV_MISSION_TYPE_FENCE);
+                                        sprintf(feedback, "Item mission type is: fence");
+                                    } else if (mission_type == MAV_MISSION_TYPE_RALLY) {
+                                        send_MISSION_REQUEST_INT(content.seq + 1,
+                                                                 MAV_MISSION_TYPE_RALLY);
+                                        sprintf(feedback, "Item mission type is: rally");
+                                    } else {
                                         send_MISSION_REQUEST_INT(content.seq + 1, mission_type);
-                                        sprintf(feedback, "Mission type is: %d", mission_type);
+                                        sprintf(feedback, "Item mission type is: %d", mission_type);
                                     }
                                     set_log_message(thiz, feedback);
+                                }
                             }
-                            }
-                            if (content.seq == missionItemCount -1)
-                            {
-                                sprintf(feedback, "content.seq = %d -1", missionItemCount);
+                            if (content.seq == missionItemCount - 1) {
+                                // reached end of the list
+                                sprintf(feedback, "content.seq = %d-1, mission type = %d", missionItemCount, mission_type);
                                 set_log_message(thiz, feedback);
-                                //FIXME: failed to send final ACK
                                 send_MISSION_ACK(content.target_system, content.target_component, mission_type);
                                 set_sound(thiz, 1);
                             }
-
                         }
                             break;
                         case 75: {
@@ -812,8 +816,7 @@ int *receiveFunction(jobject thiz) {
                             break;
                         default: {
                             sprintf(feedback, "MSG ID: %d, SYS: %d, COMP: %d, LEN: %d, SEQ: %d",
-                                    rcv_msg.msgid, rcv_msg.sysid, rcv_msg.compid, rcv_msg.len,
-                                    rcv_msg.seq);
+                                    rcv_msg.msgid, rcv_msg.sysid, rcv_msg.compid, rcv_msg.len, rcv_msg.seq);
                             set_log_message(thiz, feedback);
                         }
                             break;
@@ -997,7 +1000,8 @@ void send_MISSION_REQUEST_INT(int index, int type) {
 /** https://mavlink.io/en/messages/common.html#MISSION_ACK */
 void send_MISSION_ACK(int target_system, int target_component, int mission_type) {
     mavlink_message_t message;
-    mavlink_msg_mission_ack_pack(THIS_SYSTEM, THIS_COMPONENT, &message, target_system, target_component, MAV_MISSION_ACCEPTED, mission_type);
+    mavlink_msg_mission_ack_pack(THIS_SYSTEM, THIS_COMPONENT, &message, target_system,
+                                 target_component, MAV_MISSION_ACCEPTED, mission_type);
     uint16_t len;
     len = mavlink_msg_to_send_buffer(buf, &message);
     bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr *) &gcAddr, sizeof(struct sockaddr_in));
@@ -1026,4 +1030,5 @@ uint64_t microsSinceEpoch() {
     micros = ((uint64_t) tv.tv_sec) * 1000000 + tv.tv_usec;
     return micros;
 }
+
 #endif

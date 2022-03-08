@@ -113,8 +113,6 @@ public class Location extends Thread {
         String base64string = android.util.Base64.encodeToString(doubleArray2Bytes(data), Base64.URL_SAFE | Base64.NO_WRAP);
         Log.d("location", "base64: " + base64string);
 
-
-        /* 1 through 10*/
         if (main.logGPX.trackpointNumber <= 10) {
             /* 0 through 9 */
             int pos = ((int) main.logGPX.trackpointNumber) - 1;
@@ -272,7 +270,7 @@ public class Location extends Thread {
             /* https://mavlink.io/en/messages/common.html#MAV_FRAME_GLOBAL_RELATIVE_ALT */
             route.add(new Waypoint(lat, lon, ele + takeoff_altitude));
         }
-        System.out.println("Waypoint added: " + lat + "°, " + lon + "°, " + ele + " m (" + route.size() + " waypoints now)");
+        Log.d("location","Waypoint added: " + lat + "°, " + lon + "°, " + ele + " m (" + route.size() + " waypoints now)");
     }
 
     public int nextWaypoint() {

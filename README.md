@@ -20,6 +20,8 @@ Allows user to control RC plane through Wi-Fi. You need [USC-16 servo controller
 
 * Receiving joystick or gamepad input through UDP socket ([Input.java](PhoneUAV/src/main/java/pl.bezzalogowe/PhoneUAV/Input.java))
 
+* Receiving input and waypoints from QGroundControl using MAVLink ([mavlink_udp.c](PhoneUAV/src/main/cpp/mavlink_udp.c), [MAVLinkClass.java](PhoneUAV/src/main/java/pl.bezzalogowe/mavlink/MAVLinkClass.java))
+
 
 ## Instructions
 After cloning or downloading the project you have to do a few things before you build:

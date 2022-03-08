@@ -94,7 +94,8 @@ public class MainActivity extends Activity implements SensorEventListener {
             outputsRudder,
             outputsElevonLeft,
             outputsElevonRight;
-    //int ail, ele, thr, rdr, flaps;
+
+    /** range is from -1000 to 1000 */
     public short elevator, ailerons, throttle, rudder, flaps;
     int inputFormat = FORMAT_DEC;
     final Handler handler = new Handler() {
@@ -502,9 +503,9 @@ public class MainActivity extends Activity implements SensorEventListener {
             /* takes longer if you wait for result of gethostbyname */
             int dynDNSresult = mavLink.receiveInit();
             if (dynDNSresult == 0) {
-                System.out.println("dynDNS Host OK");
+                System.out.println("dynDNS host OK");
             } else {
-                System.out.println("dynDNS Host NOT OK, gethostbyname returned NULL");
+                System.out.println("dynDNS host failed");
             }
 
             mavLink.heartBeatInit();
@@ -711,8 +712,7 @@ public class MainActivity extends Activity implements SensorEventListener {
 
     @Override
     protected void onPause() {
-        // Ideally should implement onResume() and onPause() to take appropriate
-        // action when the activity looses focus
+        // Ideally should implement onResume() and onPause() to take appropriate action when the activity looses focus
         Log.d("called", "onPause");
         super.onPause();
     }
